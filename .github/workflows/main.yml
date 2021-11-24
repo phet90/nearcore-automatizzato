@@ -12,11 +12,13 @@ jobs:
       fail-fast: false
       matrix:
         release-name: ["${{ github.event.client_payload.network }}"]
+        version-name: ["${{ github.event.action }}"]
     steps:
       - uses: actions/checkout@v2
       - name: Ottienimento tag Github
         env: 
           RELEASE_NAME: ${{ matrix.release-name }} 
+          RELEASE_VERSION_1: ${{ matrix.version-name }} 
         run: |
           regex=""
           if [ "$RELEASE_NAME" == "mainnet" ]; then 
@@ -27,6 +29,8 @@ jobs:
             regex="[0-9]+.[0-9]+.[0-9]+-beta+" 
           fi
           echo $(curl -s https://api.github.com/repos/near/nearcore/releases | jq -c -r --arg regex "$regex" 'map(select(.tag_name | test($regex)))[0].tag_name') > tag-github.txt
+          echo "TODODO\n"
+          cat tag-github.txt
       - name: Ottienimento tags Docker Hub
         if: ${{ success() }}
         env:
@@ -54,6 +58,14 @@ jobs:
               touch hello && echo "FROM scratch" > Dockerfile
               echo "ADD hello /" >> Dockerfile && echo 'CMD ["/hello"]' >> Dockerfile
           fi
+          
+          echo "github tag \n"
+          echo $github_tag
+          echo "matrix.version-name\n"
+          echo ${{ matrix.version-name }}
+          echo "github.event.action\n"
+          echo ${{ github.event.action }}
+          
       - name: Pubblicazione immagine del tag Github nel Registry
         if: ${{ success() }}
         uses: elgohr/Publish-Docker-Github-Action@master
@@ -63,18 +75,19 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           tags: ${{ env.RELEASE_VERSION }}
 
-      - name: Installazione Rust
-        if: ${{ success() }}
-        uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: nightly-2020-03-19
+      #- name: Installazione Rust
+      #  if: ${{ success() }}
+      #  uses: hecrj/setup-rust-action@v1
+      #  with:
+      #    rust-version: nightly-2020-03-19
 
       - name: Clonazione Nearcore
         if: ${{ success() }}
         uses: actions/checkout@v2
         with:
           repository: near/nearcore
-          ref: ${{ env.RELEASE_VERSION }}
+          # ref: ${{ env.RELEASE_VERSION }}
+          ref : ${{ github.event.action }}
 
       - name: Pubblicazione immagine piu recente di Docker nel Registry
         if: ${{ success() }}
